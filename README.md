@@ -1,0 +1,1 @@
+# The-Social-Informatics-Team-Project-at-Kindai-University
