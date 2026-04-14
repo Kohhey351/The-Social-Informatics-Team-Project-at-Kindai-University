@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>テスト用</title>
+  <style>
+    .device-table { display: none; margin-top: 20px; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; }
+    .large-select {
+      font-size: 1.2em;
+      padding: 8px 12px;
+      min-width: 200px;
+    }
+    #loginArea label, #loginArea input {
+      font-size: 1.2em;
+    }
+    #loginArea {
+      max-width: 300px;
+      margin: 50px auto;
+    }
+    #loginArea input {
+      padding: 8px;
+      margin-top: 6px;
+      margin-bottom: 15px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #loginBtn {
+      font-size: 1.2em;
+      padding: 8px 15px;
+    }
+  </style>
+</head>
+<body>
+<h1>タイトル</h1>
+
+<!-- ログインエリア -->
+<div id="loginArea">
+  <h2>ログインしてください</h2>
+  <label for="inputId">ID：</label>
+  <input type="text" id="inputId" />
+  <br />
+  <label for="inputPassword">パスワード：</label>
+  <input type="password" id="inputPassword" />
+  <br />
+  <button id="loginBtn">ログイン</button>
+  <div id="loginError" style="color:red; display:none;">IDかパスワードが違います。</div>
+</div>
+
+<!-- メインコンテンツ -->
+<button id="logoutBtn" style="position: fixed; top: 10px; right: 10px; display: none; padding: 8px 15px; font-size: 1em;">ログアウト</button>
+<div id="mainContent" style="display:none;">
+  <div id="newsWrapper" style="margin-top:20px; border: 3px solid #a9c4e4; border-radius: 8px; overflow: hidden;">
+    <div style="background-color: #a9c4e4; color: white; padding: 10px 15px; font-size: 1.5em; font-weight: bold;">
+      最近のニュース
+    </div>
+    <div id="newsList" style="padding: 20px 20px; font-size: 1.3em; line-height: 2.2em; min-height: 50px; max-height: 6.6em; overflow-y: auto;"></div>
+  </div>
+  <div style="margin: 10px 0 20px 0;">
+    <button id="editBtn">編集</button>
+    <button id="addBtn" style="display:none;">追加</button>
+    <button id="saveBtn" style="display:none;">保存</button>
+  </div>
+
+  <label for="deviceSelect">部屋番号：</label>
+  <select id="deviceSelect" class="large-select"></select>
+
+  <div id="data-list" style="margin-top: 1em;">
+    <!-- 全て表示用テーブル -->
+    <div id="table-ALL" class="device-table" style="display:none;">
+      <table>
+        <thead>
+          <tr><th>部屋番号</th><th>日時</th><th>状態</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const validUsers = [
+  { id: "staff", password: "0000", role: "staff" },
+  { id: "room101", password: "1111", role: "room", room: "101号室" },
+  { id: "room102", password: "2222", role: "room", room: "102号室" },
+  { id: "room103", password: "3333", role: "room", room: "103号室" },
+  { id: "room104", password: "4444", role: "room", room: "104号室" }
+];
+
+let currentUser = null;
+
+window.addEventListener("DOMContentLoaded", () => {
+  setupSelectChange();
+  const loginBtn = document.getElementById("loginBtn");
+  const loginArea = document.getElementById("loginArea");
+  const loginError = document.getElementById("loginError");
+  const logoutBtn = document.getElementById('logoutBtn');
+  const mainContent = document.getElementById("mainContent");
+
+  loginBtn.addEventListener("click", () => {
+    const inputId = document.getElementById("inputId").value.trim();
+    const inputPassword = document.getElementById("inputPassword").value.trim();
+
+    currentUser = validUsers.find(user => user.id === inputId && user.password === inputPassword);
+
+    if (currentUser) {
+      loginError.style.display = "none";
+      loginArea.style.display = "none";
+      mainContent.style.display = "block";
+      logoutBtn.style.display = "inline-block";
+
+      if (currentUser.role !== "staff") {
+        document.getElementById("editBtn").style.display = "none";
+        document.getElementById("addBtn").style.display = "none";
+        document.getElementById("saveBtn").style.display = "none";
+      }
+
+      renderNews();
+      loadData();
+    } else {
+      loginError.style.display = "block";
+    }
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    // 画面状態を初期に戻す
+    document.getElementById('loginArea').style.display = 'block';
+    document.getElementById('mainContent').style.display = 'none';
+    logoutBtn.style.display = 'none';
+
+    // 入力欄クリア
+    document.getElementById('inputId').value = '';
+    document.getElementById('inputPassword').value = '';
+
+    // ニュース編集ボタン表示状態リセット
+    document.getElementById("editBtn").style.display = "inline-block";
+    document.getElementById("deviceSelect").disabled = false;
+    document.getElementById("deviceSelect").innerHTML = "";
+    document.getElementById("data-list").querySelectorAll(".device-table").forEach(el => {
+      if(el.id !== "table-ALL") el.remove();
+    });
+    document.getElementById("table-ALL").querySelector("tbody").innerHTML = "";
+    document.getElementById("newsList").innerHTML = "";
+    document.getElementById("addBtn").style.display = "none";
+    document.getElementById("saveBtn").style.display = "none";
+
+    currentUser = null;
+  });
+});
+
+let newsItems = [{date: getToday(), text: '特になし'}];
+
+function getToday() {
+  const today = new Date();
+  return `${today.getMonth() + 1}/${today.getDate()}`;
+}
+
+function renderNews() {
+  const newsList = document.getElementById("newsList");
+  newsList.innerHTML = '';
+  newsItems.forEach(item => {
+    const div = document.createElement('div');
+    div.textContent = `・${item.date} ${item.text}`;
+    newsList.appendChild(div);
+  });
+}
+
+document.getElementById("editBtn").addEventListener("click", () => {
+  const newsList = document.getElementById("newsList");
+  newsList.innerHTML = '';
+  newsItems.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = item.text;
+    input.dataset.index = idx;
+    input.style.flex = 1;
+    div.appendChild(document.createTextNode('・'));
+    div.appendChild(input);
+    newsList.appendChild(div);
+  });
+
+  document.getElementById("editBtn").style.display = "none";
+  document.getElementById("addBtn").style.display = "inline-block";
+  document.getElementById("saveBtn").style.display = "inline-block";
+});
+
+document.getElementById("addBtn").addEventListener("click", () => {
+  const newsList = document.getElementById("newsList");
+  const div = document.createElement('div');
+  div.style.display = 'flex';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = '';
+  input.style.flex = 1;
+  div.appendChild(document.createTextNode('・'));
+  div.appendChild(input);
+  newsList.appendChild(div);
+});
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+  const inputs = document.querySelectorAll('#newsList input');
+  newsItems = Array.from(inputs).map(input => ({
+    date: getToday(),
+    text: input.value.trim()
+  })).filter(item => item.text);
+
+  renderNews();
+  document.getElementById("editBtn").style.display = "inline-block";
+  document.getElementById("addBtn").style.display = "none";
+  document.getElementById("saveBtn").style.display = "none";
+});
+
+function setupSelectChange() {
+  const select = document.getElementById("deviceSelect");
+  const container = document.getElementById("data-list");
+  const allTable = document.getElementById("table-ALL");
+
+  select.addEventListener("change", () => {
+    const val = select.value;
+
+    container.querySelectorAll(".device-table").forEach(el => el.style.display = 'none');
+
+    if (val === "ALL" || (currentUser && currentUser.role !== "staff")) {
+      allTable.style.display = "block";
+    } else {
+      const targetTable = document.getElementById(`table-${val}`);
+      if (targetTable) {
+        targetTable.style.display = 'block';
+      } else {
+        console.warn(`表示対象のテーブル table-${val} が存在しません`);
+      }
+    }
+  });
+}
+
+let changeHandlerAdded = false;
+let previousDevice = null;
+
+function loadData() {
+  if (!currentUser) {
+    console.warn("currentUser が未定義です。ログインしてから実行してください。");
+    return;
+  }
+
+  const safeId = (str) => {
+  // 部屋名から数字だけを抽出（例: "101号室" → "101"）
+  const match = str.match(/\d+/);
+  return match ? match[0] : str;
+};
+
+  google.script.run.withSuccessHandler(function(devices) {
+    const select = document.getElementById("deviceSelect");
+    const container = document.getElementById("data-list");
+    select.innerHTML = '';
+
+    // 個別テーブルは一旦削除（ALLテーブルは残す）
+    container.querySelectorAll(".device-table").forEach(el => {
+      if (el.id !== "table-ALL") el.remove();
+    });
+
+    const allTable = document.getElementById("table-ALL");
+    const allTbody = allTable.querySelector("tbody");
+    allTbody.innerHTML = '';
+
+    const sortedDeviceNames = Object.keys(devices).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''));
+      const numB = parseInt(b.replace(/\D/g, ''));
+      return numA - numB;
+    });
+
+    if (currentUser.role === "staff") {
+      const allOption = document.createElement("option");
+      allOption.value = "ALL";
+      allOption.textContent = "全て表示";
+      select.appendChild(allOption);
+    }
+
+    // 全データ格納用
+    let allRows = [];
+
+    sortedDeviceNames.forEach(device => {
+      if (currentUser.role === "staff" || device === currentUser.room) {
+        const safeDeviceId = safeId(device);
+
+        // セレクトボックスに追加（値は安全ID、表示は元の名前）
+        const option = document.createElement("option");
+        option.value = safeDeviceId;
+        option.textContent = device;
+        select.appendChild(option);
+
+        // staffのみ個別テーブル作成
+        if (currentUser.role === "staff" || device === currentUser.room) {
+          const div = document.createElement("div");
+          div.className = "device-table";
+          div.id = `table-${safeDeviceId}`;
+
+          const table = document.createElement("table");
+          table.innerHTML = `<thead><tr><th>日時</th><th>状態</th></tr></thead>`;
+          const tbody = document.createElement("tbody");
+
+          (devices[device] || []).forEach(row => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${new Date(row.time).toLocaleString()}</td><td>${row.status}</td>`;
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          div.appendChild(table);
+          container.appendChild(div);
+        }
+
+        // ALL用データ追加
+        (devices[device] || []).forEach(row => {
+          allRows.push({
+            device: device,
+            time: row.time,
+            status: row.status
+          });
+        });
+      }
+    });
+
+    // ALLテーブルに1回だけ表示（日付昇順）
+    allRows.sort((a, b) => new Date(a.time) - new Date(b.time));
+    allRows.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${row.device}</td><td>${new Date(row.time).toLocaleString()}</td><td>${row.status}</td>`;
+      allTbody.appendChild(tr);
+    });
+
+    // セレクトボックスの初期表示設定
+    if (!changeHandlerAdded) {
+      select.addEventListener("change", () => {
+        const val = select.value;
+        const container = document.getElementById("data-list");
+
+        // 確認表示
+        if(currentUser.role === "staff" && previousDevice !== null && previousDevice !== val && val !== "ALL"){
+          const ok = confirm(`「${val}号室」に切り替えますか？`);
+          if(!ok){
+            select.value = previousDevice;
+            return;
+          }
+        }
+
+        container.querySelectorAll(".device-table").forEach(el => el.style.display = 'none');
+
+        if (val === "ALL") {
+          allTable.style.display = "block";
+        } else {
+          const targetTable = document.getElementById(`table-${val}`);
+          if (targetTable) {
+            targetTable.style.display = 'block';
+          } else {
+            console.warn(`表示対象のテーブル table-${val} が存在しません`);
+          }
+        }
+        previousDevice = val;
+      });
+      changeHandlerAdded = true;
+    }
+
+    if (currentUser.role === "staff") {
+      select.value = "ALL";
+    } else {
+      select.value = safeId(currentUser.room);
+      select.disabled = true;
+      previousDevice = val;
+    }
+
+    setTimeout(() => {
+      select.dispatchEvent(new Event("change"));
+    }, 0);
+
+  }).getData();
+}
+</script>
+</body>
+</html>
