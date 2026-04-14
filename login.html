@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  body { background-color: #f0f0f5; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+  #loginArea { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; width: 300px; }
+  input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+  button { width: 100%; padding: 10px; background-color: #000080; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px;}
+  button:hover { background-color: #000050; }
+  label { display: block; text-align: left; font-weight: bold; font-size: 14px; color: #333; }
+</style>
+</head>
+<body>
+
+<div id="loginArea">
+  <h2 style="color:#000080;">CoCoiru Login</h2>
+  <label for="inputId">ID：</label>
+  <input type="text" id="inputId" placeholder="IDを入力" />
+  
+  <label for="inputPassword">パスワード：</label>
+  <input type="password" id="inputPassword" placeholder="パスワードを入力" />
+  
+  <button id="loginBtn" onclick="doLogin()">ログイン</button>
+  <div id="loginError" style="color:red; display:none; margin-top:15px; font-size:14px;">IDかパスワードが違います。</div>
+  
+  <div style="margin-top: 20px; font-size: 12px; color: #666; text-align: left;">
+    <p>※デモ用アカウント:</p>
+    <li>従業員: staff / 000</li>
+    <li>101号室: 101 / 101</li>
+  </div>
+</div>
+
+<script>
+  function doLogin() {
+    const id = document.getElementById('inputId').value;
+    const pass = document.getElementById('inputPassword').value;
+    const errorMsg = document.getElementById('loginError');
+
+    // GASのログイン判定を呼び出す
+    google.script.run.withSuccessHandler(function(result) {
+      if (result.success) {
+        if (result.type === 'employee') {
+          // 従業員の場合：名前を保存して従業員ページへ
+          localStorage.setItem('loginName', result.name);
+          window.top.location.href = "https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee";
+        } else {
+          // 居住者の場合：自分の番号(index)を保存して個人ページへ
+          localStorage.setItem('myResidentIndex', result.index);
+          window.top.location.href = "https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=family_personal";
+        }
+      } else {
+        // エラー表示
+        errorMsg.style.display = 'block';
+      }
+    }).checkLogin(id, pass);
+  }
+</script>
+</body>
+</html>

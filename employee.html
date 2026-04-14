@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; }
+  .menu-group { display: flex; height: 100%; }
+  .menu-item { padding: 0 10px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; }
+  .menu-item:hover { background-color: #333; }
+  .dropdown-content { display: none; position: absolute; top: 35px; left: 0; background-color: #f9f9f9; min-width: 220px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 100; border: 1px solid #ccc; }
+  .dropdown-content a { color: black; padding: 12px 16px; text-decoration: none; display: block; font-weight: normal; cursor: pointer; }
+  .dropdown-content a:hover { background-color: #ddd; }
+  .show { display: block; }
+  .content { flex: 1; padding: 30px 50px; overflow-y: auto; }
+  h1 { font-family: "Hiragino Mincho ProN", serif; font-size: 42px; margin: 0 0 20px 0; font-weight: normal; }
+  h1 span { font-family: "Hiragino Kaku Gothic ProN", sans-serif; font-size: 18px; color: #333; margin-left: 15px; }
+  .notification-area { margin-bottom: 30px; }
+  .alert-box { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+  .alert-box:hover { background-color: #ffe8a1; }
+  .alert-badge { background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; }
+  .alert-time { font-size: 12px; color: #666; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+  th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+  th { background-color: #e6e6e6; font-weight: normal; }
+  .text-center { text-align: center; }
+  
+  /* モーダル */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: none; justify-content: center; align-items: center; z-index: 50;}
+  .modal-window { background: #f2f2f2; width: 500px; border: 1px solid #999; box-shadow: 0 5px 30px rgba(0,0,0,0.5); padding-bottom: 20px; }
+  .modal-header { display: flex; justify-content: flex-end; padding: 5px 10px; }
+  .modal-controls span { display: inline-block; width: 15px; height: 15px; border: 1px solid #999; margin-left: 5px; text-align: center; line-height: 13px; font-size: 12px; cursor: pointer; }
+  .modal-content { padding: 20px 40px; text-align: center; }
+  .modal-text { font-size: 16px; margin-bottom: 30px; text-align: left; }
+  .modal-action { font-size: 20px; margin: 20px 0; text-align: left; padding-left: 20px; }
+  .modal-link { text-decoration: underline; cursor: pointer; font-weight: bold; margin-left: 10px; color: #007bff; }
+</style>
+</head>
+<body>
+
+<div class="mac-window">
+  <div class="title-bar">
+    <div class="menu-group">
+      <div class="menu-item">ココイル</div>
+      <div class="menu-item" onclick="toggleMenu('editDropdown')">
+        編集 ▼
+        <div id="editDropdown" class="dropdown-content">
+          <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=edit_resident">入居者の追加・削除</a>
+          <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=edit_staff">スタッフの追加・削除</a>
+        </div>
+      </div>
+      <div class="menu-item" onclick="toggleMenu('boardDropdown')">
+        掲示板 ▼
+        <div id="boardDropdown" class="dropdown-content">
+          <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee_messages">💬 業務連絡 (従業員のみ)</a>
+          <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee_news">📢 ニュース管理 (全体公開)</a>
+        </div>
+      </div>
+    </div>
+    <span id="realtime-clock">--:--:--</span>
+  </div>
+
+  <div class="content">
+    <h1>ココイル <span>従業員専用ページ</span></h1>
+    <div class="notification-area" id="notification-area"></div>
+    <h2>ご入居者様情報データベース</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 10%;">部屋名</th>
+          <th style="width: 30%;">ご入居者さま</th>
+          <th style="width: 10%;">在室状況</th>
+          <th style="width: 40%;">最終変更時間</th>
+          <th style="width: 10%;">チェック</th>
+        </tr>
+      </thead>
+      <tbody id="resident-list">
+        <tr><td colspan="5">データを読み込み中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-controls"><span>_</span><span>□</span><span onclick="closeModal()">×</span></div>
+      </div>
+      <div class="modal-content">
+        <p class="modal-text">あなたが選択しているのは <span id="modal-name"></span> さんです</p>
+        <div class="modal-action">
+          →24時間の退出記録を確認しますか
+          <span class="modal-link" id="btn-log">はい</span>
+        </div>
+        <div class="modal-action">
+          →最新の映像を確認しますか
+          <span class="modal-link" id="btn-video">はい</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function startClock() {
+    function update() {
+      const now = new Date();
+      const days = ['日', '月', '火', '水', '木', '金', '土'];
+      document.getElementById('realtime-clock').innerText = 
+        `${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]}) ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+    setInterval(update, 1000);
+    update();
+  }
+
+  function jumpTo(pageName) {
+    window.top.location.href = "?page=" + pageName;
+  }
+
+  function loadResidents() {
+    google.script.run.withSuccessHandler(onResidentsLoaded).getResidentsData();
+  }
+
+  function onResidentsLoaded(residents) {
+    const tbody = document.getElementById('resident-list');
+    tbody.innerHTML = '';
+    if(residents.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5">データがありません</td></tr>';
+      return;
+    }
+    residents.forEach(r => {
+      let statusColor = '#333';
+      if (r.status === '在室') statusColor = 'blue';
+      else if (r.status === '不在') statusColor = 'red';
+      let displayTime = r.time;
+      if(displayTime instanceof Date) {
+         displayTime = `${displayTime.getHours()}:${String(displayTime.getMinutes()).padStart(2,'0')} 更新`;
+      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.room}</td>
+        <td>${r.name}</td>
+        <td style="color: ${statusColor}; font-weight: bold;">${r.status}</td>
+        <td>${displayTime}</td>
+        <td class="text-center"><input type="checkbox" style="cursor:pointer;" onclick="openModal('${r.name}')"></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  let lastMsgCount = 0;
+  let lastNewsCount = 0;
+  function checkNotifications() {
+    google.script.run.withSuccessHandler(updateNotifications).getMessagesData();
+    google.script.run.withSuccessHandler(updateNewsNotifications).getNewsData();
+  }
+  function updateNotifications(msgs) {
+    if (msgs.length > 0 && msgs.length > lastMsgCount) {
+       const latest = msgs[msgs.length - 1];
+       showNotification('業務連絡', latest.title + ' (by ' + latest.author + ')', 'employee_messages', '#fff3cd');
+    }
+    lastMsgCount = msgs.length;
+  }
+  function updateNewsNotifications(news) {
+    if (news.length > 0 && news.length > lastNewsCount) {
+       const latest = news[news.length - 1];
+       showNotification('ニュース', latest.title, 'employee_news', '#d1ecf1');
+    }
+    lastNewsCount = news.length;
+  }
+  function showNotification(badgeText, msgText, linkPage, bgColor) {
+    const area = document.getElementById('notification-area');
+    area.innerHTML = ''; 
+    const div = document.createElement('div');
+    div.className = 'alert-box';
+    div.style.backgroundColor = bgColor;
+    div.onclick = function() { jumpTo(linkPage); };
+    div.innerHTML = `
+      <div><span class="alert-badge">${badgeText}</span> 新着: ${msgText}</div>
+      <div class="alert-time">Click ▶</div>
+    `;
+    area.appendChild(div);
+  }
+
+  function toggleMenu(id) {
+    const all = document.getElementsByClassName("dropdown-content");
+    for(let i=0; i<all.length; i++) {
+      if(all[i].id !== id) all[i].classList.remove('show');
+    }
+    document.getElementById(id).classList.toggle("show");
+  }
+  window.onclick = function(event) {
+    if (!event.target.matches('.menu-item')) {
+      const dropdowns = document.getElementsByClassName("dropdown-content");
+      for (let i = 0; i < dropdowns.length; i++) {
+        if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
+      }
+    }
+  }
+
+  function openModal(name) {
+    document.getElementById('modal-name').innerText = name;
+    document.getElementById('btn-log').onclick = function() {
+      localStorage.setItem('selectedEmployeeTarget', name);
+      jumpTo('employee_log');
+    };
+    document.getElementById('btn-video').onclick = function() {
+      localStorage.setItem('selectedEmployeeTarget', name);
+      jumpTo('employee_video');
+    };
+    document.getElementById('modal').style.display = 'flex';
+  }
+  function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+  window.onload = function() {
+    startClock();
+    loadResidents();
+    checkNotifications();
+    setInterval(checkNotifications, 10000); 
+  };
+</script>
+</body>
+</html>

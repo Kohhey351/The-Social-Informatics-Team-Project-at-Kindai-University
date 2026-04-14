@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  /* 共通スタイル */
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; }
+  .content { flex: 1; padding: 30px 50px; overflow-y: auto; }
+  
+  h1 { font-family: "Hiragino Mincho ProN", serif; font-size: 36px; color: #000080; border-bottom: 2px solid #000080; padding-bottom: 10px; margin-bottom: 20px;}
+  
+  /* ニュースエリア */
+  .news-box { background-color: #f0f0f5; padding: 15px 30px; border-radius: 15px; margin-bottom: 30px; border: 1px solid #dcdceb; }
+  .news-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #000080; }
+  .news-list li { margin-bottom: 5px; }
+
+  /* 個人情報エリア */
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 16px; }
+  .info-table th { background-color: #e6e6e6; width: 150px; font-weight: normal; border: 1px solid #ccc; padding: 10px; }
+  .info-table td { border: 1px solid #ccc; padding: 10px; }
+
+  /* ログと写真 */
+  .split-container { display: flex; gap: 40px; align-items: flex-start; }
+  .left-panel { flex: 1; }
+  .right-panel { width: 300px; text-align: center; }
+  .log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .log-table td, .log-table th { border: 1px solid #ddd; padding: 8px; }
+  .photo-frame img { width: 100%; border: 1px solid #ccc; padding: 5px; background: white; }
+</style>
+</head>
+<body>
+
+<div class="mac-window">
+  <div class="title-bar">
+    <span>ココイル マイページ</span>
+    <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=login" style="color:white; text-decoration:none;">[ログアウト]</a>
+  </div>
+
+  <div class="content">
+    <h3 style="color:#000080; margin-top:0;">📢 お知らせ</h3>
+    <div class="news-box">
+      <ul class="news-list" id="personal-news-list"><li>読み込み中...</li></ul>
+    </div>
+
+    <h1 id="disp-name">ようこそ</h1>
+
+    <table class="info-table">
+      <tr><th>現在の状況</th><td id="disp-status" style="font-weight:bold;">-</td></tr>
+      <tr><th>最終更新</th><td id="disp-time">-</td></tr>
+    </table>
+
+    <div class="split-container">
+      <div class="left-panel">
+        <h4>直近の記録</h4>
+        <table class="log-table">
+          <thead><tr><th>時間</th><th>状況</th></tr></thead>
+          <tbody id="log-list"></tbody>
+        </table>
+      </div>
+      <div class="right-panel">
+        <h4>カメラ映像</h4>
+        <div class="photo-frame">
+          <img src="https://placehold.jp/300x200.png?text=CAMERA" alt="カメラ">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.onload = function() {
+    // ログイン時に保存した「自分の番号」を取得
+    const myIndex = localStorage.getItem('myResidentIndex');
+    
+    if (myIndex === null) {
+      alert("ログインされていません");
+      window.top.location.href = "?page=login";
+      return;
+    }
+
+    loadData(myIndex);
+  };
+
+  function loadData(index) {
+    // ニュース取得
+    google.script.run.withSuccessHandler(function(news){
+      const ul = document.getElementById('personal-news-list');
+      ul.innerHTML = '';
+      if(news.length===0) { ul.innerHTML = '<li>なし</li>'; return; }
+      news.reverse().slice(0,3).forEach(item => {
+        let d = item.date;
+        if(d instanceof Date) d = (d.getMonth()+1)+"/"+d.getDate();
+        const li = document.createElement('li');
+        li.innerText = `【${d}】 ${item.title}`;
+        ul.appendChild(li);
+      });
+    }).getNewsData();
+
+    // 自分のデータ取得
+    google.script.run.withSuccessHandler(function(residents){
+      const person = residents[index];
+      if(person) {
+        document.getElementById('disp-name').innerText = person.name + " 様のページ";
+        document.getElementById('disp-status').innerText = person.status;
+        document.getElementById('disp-time').innerText = person.time;
+        
+        // ダミーログ生成
+        const tbody = document.getElementById('log-list');
+        tbody.innerHTML = `<tr><td>${person.time}</td><td>${person.status}</td></tr>`;
+        tbody.innerHTML += `<tr><td>10:00:00</td><td>不在</td></tr>`;
+      }
+    }).getResidentsData();
+  }
+</script>
+</body>
+</html>

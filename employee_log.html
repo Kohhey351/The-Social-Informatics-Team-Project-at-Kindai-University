@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; }
+  .back-link { color: #ccc; text-decoration: none; margin-right: 15px; cursor: pointer; }
+  .back-link:hover { color: white; text-decoration: underline; }
+  .content { flex: 1; padding: 40px 50px; overflow-y: auto; }
+  h1 { font-family: "Hiragino Mincho ProN", serif; font-size: 36px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+  .log-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .log-table th, .log-table td { border: 1px solid #ccc; padding: 12px; text-align: left; }
+  .log-table th { background-color: #f0f0f0; width: 200px; }
+  .status-out { color: red; font-weight: bold; }
+  .status-in { color: blue; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="mac-window">
+  <div class="title-bar">
+    <div><a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee" class="back-link">◀︎ 従業員ページに戻る</a><span>入退室ログ確認モード</span></div>
+    <span id="clock">--:--</span>
+  </div>
+  <div class="content">
+    <h1><span id="target-name"></span> 様の24時間記録</h1>
+    <table class="log-table">
+      <thead><tr><th>時間</th><th>アクション</th><th>詳細</th></tr></thead>
+      <tbody id="log-list"></tbody>
+    </table>
+  </div>
+</div>
+<script>
+  window.onload = function() {
+    const name = localStorage.getItem('selectedEmployeeTarget');
+    document.getElementById('target-name').innerText = name ? name : "対象者不明";
+    const tbody = document.getElementById('log-list');
+    const logs = [
+      { time: "16:00:02", type: "in", text: "部屋に入りました" },
+      { time: "15:45:00", type: "out", text: "部屋を出ました" },
+      { time: "12:30:15", type: "in", text: "部屋に入りました" }
+    ];
+    logs.forEach(log => {
+      const tr = document.createElement('tr');
+      const statusClass = log.type === 'out' ? 'status-out' : 'status-in';
+      tr.innerHTML = `<td>${log.time}</td><td class="${statusClass}">${log.type === 'out' ? '退出' : '入室'}</td><td>${log.text}</td>`;
+      tbody.appendChild(tr);
+    });
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  /* スタイル省略 */
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; display: flex; align-items: center; font-size: 12px; font-weight: bold; }
+  .back-link { color: #ccc; text-decoration: none; margin-right: 20px; cursor: pointer; }
+  .back-link:hover { color: white; text-decoration: underline; }
+  .content { flex: 1; padding: 40px 100px; overflow-y: auto; background-color: #fcfcfc; }
+  h1 { border-bottom: 2px solid #000080; padding-bottom: 10px; margin-bottom: 30px; color: #000080; }
+  .news-form { background: #e6f7ff; padding: 20px; border-radius: 8px; margin-bottom: 40px; border: 1px solid #b8e6ff; }
+  .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .input-text { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+  .post-btn { background: #000080; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+  .post-btn:hover { background: #000050; }
+  .news-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; }
+  .news-item:first-child { border-top: 1px solid #eee; }
+  .news-text { font-size: 16px; color: #333; }
+  .delete-btn { color: red; cursor: pointer; font-size: 14px; margin-left: 20px; border: 1px solid red; padding: 2px 8px; border-radius: 4px; }
+  .delete-btn:hover { background: #ffe6e6; }
+</style>
+</head>
+<body>
+
+<div class="mac-window">
+  <div class="title-bar">
+    <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee" class="back-link">◀︎ ホームに戻る</a>
+    <span>ニュース管理 (入居者様へ公開されます)</span>
+  </div>
+
+  <div class="content">
+    <h1>📢 ニュース管理</h1>
+    <p style="margin-bottom: 20px; color: #666;">ここで投稿した内容は、居住者向けホームページのトップに表示されます。</p>
+
+    <div class="news-form">
+      <div class="input-row">
+        <input type="text" id="news-input" class="input-text" placeholder="ニュースの内容を入力">
+        <button class="post-btn" onclick="postNews()">公開する</button>
+      </div>
+    </div>
+
+    <h3>現在の公開ニュース一覧</h3>
+    <div id="news-list">読み込み中...</div>
+  </div>
+</div>
+
+<script>
+  window.onload = function() { loadNews(); };
+
+  function loadNews() {
+    google.script.run.withSuccessHandler(renderNews).getNewsData();
+  }
+
+  function renderNews(list) {
+    const container = document.getElementById('news-list');
+    container.innerHTML = '';
+    
+    if(list.length === 0) {
+      container.innerHTML = '<p>ニュースはありません</p>';
+      return;
+    }
+
+    list.reverse().forEach((item, index) => {
+      const realIndex = list.length - 1 - index;
+      
+      const div = document.createElement('div');
+      div.className = 'news-item';
+      
+      // 日付の処理
+      let dateStr = item.date;
+      if (dateStr instanceof Date) dateStr = `${dateStr.getMonth()+1}/${dateStr.getDate()}`;
+
+      div.innerHTML = `
+        <span class="news-text">【${dateStr}】 ${item.title}</span>
+        <button class="delete-btn" onclick="deleteNews(${realIndex})">削除</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function postNews() {
+    const input = document.getElementById('news-input');
+    const text = input.value;
+    if(!text) return;
+
+    google.script.run.withSuccessHandler(function(){
+      input.value = '';
+      loadNews();
+    }).addNews(text);
+  }
+
+  function deleteNews(index) {
+    if(confirm('削除しますか？')) {
+      google.script.run.withSuccessHandler(loadNews).deleteNews(index);
+    }
+  }
+</script>
+</body>
+</html>

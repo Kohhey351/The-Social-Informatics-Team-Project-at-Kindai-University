@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  /* edit_residentと同じスタイル */
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+  .back-link { color: #ccc; text-decoration: none; margin-right: 15px; cursor: pointer; font-size: 14px; }
+  .back-link:hover { color: white; text-decoration: underline; }
+  .content { flex: 1; padding: 40px 50px; overflow-y: auto; }
+  h1 { font-family: "Hiragino Mincho ProN", serif; font-size: 32px; margin-bottom: 30px; border-bottom: 2px solid #000080; color: #000080; padding-bottom: 10px; }
+  .section { margin-bottom: 50px; }
+  h2 { font-size: 20px; color: #333; margin-bottom: 15px; }
+  .input-box { background: #eef; padding: 20px; border-radius: 8px; border: 1px solid #dde; }
+  .input-row { display: flex; gap: 20px; align-items: center; margin-bottom: 15px; }
+  label { width: 120px; font-weight: bold; }
+  input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; flex-grow: 1; max-width: 400px; }
+  .btn { padding: 10px 30px; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+  .btn-add { background-color: #000080; }
+  .btn-add:hover { background-color: #000060; }
+  .btn-delete { background-color: #dc3545; padding: 5px 15px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border-bottom: 1px solid #eee; padding: 15px; text-align: left; }
+  th { background-color: #f8f8f8; color: #555; }
+</style>
+</head>
+<body>
+
+<div class="mac-window">
+  <div class="title-bar">
+    <div>
+      <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee" class="back-link">◀︎ 戻る</a>
+      <span>ココイル スタッフ編集モード</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <h1>スタッフ情報の追加・削除</h1>
+
+    <div class="section">
+      <h2>👔 新規スタッフの登録</h2>
+      <div class="input-box">
+        <div class="input-row">
+          <label>ログインID：</label>
+          <input type="text" id="input-id" placeholder="例：staff01">
+        </div>
+        <div class="input-row">
+          <label>表示名：</label>
+          <input type="text" id="input-name" placeholder="例：鈴木">
+        </div>
+        <div class="input-row">
+          <label>パスワード：</label>
+          <input type="text" id="input-pass" placeholder="ログイン用パスワード">
+        </div>
+        <div class="input-row" style="justify-content: flex-end; max-width: 540px;">
+          <button class="btn btn-add" onclick="addStaff()">登録する</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📋 登録済みスタッフリスト</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">ID</th>
+            <th style="width: 60%;">表示名</th>
+            <th style="width: 20%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="staff-list">
+          <tr><td colspan="3">読み込み中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.onload = function() { loadStaff(); };
+
+  function loadStaff() {
+    google.script.run.withSuccessHandler(renderList).getStaffData();
+  }
+
+  function renderList(staffList) {
+    const tbody = document.getElementById('staff-list');
+    tbody.innerHTML = '';
+    if (staffList.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3">データがありません</td></tr>';
+      return;
+    }
+    staffList.forEach((s, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${s.id}</td>
+        <td>${s.name}</td>
+        <td><button class="btn btn-delete" onclick="deleteStaff(${index})">削除</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function addStaff() {
+    const id = document.getElementById('input-id').value;
+    const name = document.getElementById('input-name').value;
+    const pass = document.getElementById('input-pass').value;
+
+    if (!id || !name || !pass) { alert("すべての項目を入力してください"); return; }
+
+    google.script.run.withSuccessHandler(function(){
+      document.getElementById('input-id').value = '';
+      document.getElementById('input-name').value = '';
+      document.getElementById('input-pass').value = '';
+      loadStaff();
+      alert("スタッフを追加しました");
+    }).addStaff(id, name, pass);
+  }
+
+  function deleteStaff(index) {
+    if(confirm('本当にこのスタッフを削除しますか？\n（ログインできなくなります）')) {
+      google.script.run.withSuccessHandler(loadStaff).deleteStaff(index);
+    }
+  }
+</script>
+</body>
+</html>

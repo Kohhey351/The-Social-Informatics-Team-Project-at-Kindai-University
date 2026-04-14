@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  /* スタイルは共通（省略せずに記述） */
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; display: flex; align-items: center; font-size: 12px; font-weight: bold; }
+  .back-link { color: #ccc; text-decoration: none; margin-right: 20px; cursor: pointer; }
+  .back-link:hover { color: white; text-decoration: underline; }
+  .content { flex: 1; padding: 40px 100px; overflow-y: auto; background-color: #fcfcfc; }
+  h1 { border-bottom: 2px solid #555; padding-bottom: 10px; margin-bottom: 30px; }
+  .post-form { background: #eee; padding: 20px; border-radius: 8px; margin-bottom: 40px; }
+  .input-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+  .input-group label { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+  .input-text { padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+  .post-btn { background: #007bff; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; align-self: flex-start; }
+  .post-btn:hover { background: #0056b3; }
+  .msg-card { background: white; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+  .msg-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+  .msg-title { font-weight: bold; font-size: 18px; color: #333; }
+  .msg-meta { font-size: 12px; color: #888; }
+  .msg-body { font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+  .delete-btn { color: red; cursor: pointer; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="mac-window">
+  <div class="title-bar">
+    <a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee" class="back-link">◀︎ ホームに戻る</a>
+    <span>業務連絡掲示板 (社内秘)</span>
+  </div>
+
+  <div class="content">
+    <h1>💬 業務連絡</h1>
+
+    <div class="post-form">
+      <h3>新規連絡の作成</h3>
+      <div class="input-group">
+        <label>タイトル</label>
+        <input type="text" id="in-title" class="input-text" placeholder="例：来週のシフトについて">
+      </div>
+      <div class="input-group">
+        <label>内容</label>
+        <textarea id="in-body" class="input-text" rows="3" placeholder="詳細を入力してください"></textarea>
+      </div>
+      <div class="input-group">
+        <label>投稿者名</label>
+        <input type="text" id="in-author" class="input-text" placeholder="例：鈴木">
+      </div>
+      <button class="post-btn" onclick="postMessage()">掲示板に投稿する</button>
+    </div>
+
+    <div id="message-list">読み込み中...</div>
+  </div>
+</div>
+
+<script>
+  /* --- employee_messages.html の script内 --- */
+
+  window.onload = function() {
+    loadMessages();
+
+    // ★追加：ログインした名前を自動入力して、書き換えできないようにする
+    const loginName = localStorage.getItem('loginName');
+    if (loginName) {
+      const authorInput = document.getElementById('in-author');
+      authorInput.value = loginName;
+      authorInput.readOnly = true; // 書き換え不可にする（任意）
+      authorInput.style.backgroundColor = "#e9ecef"; // グレーアウト
+    }
+  };
+
+  function loadMessages() {
+    // サーバーからデータ取得
+    google.script.run.withSuccessHandler(renderMessages).getMessagesData();
+  }
+
+  function renderMessages(list) {
+    const container = document.getElementById('message-list');
+    container.innerHTML = '';
+    
+    if (list.length === 0) {
+      container.innerHTML = '<p>メッセージはありません</p>';
+      return;
+    }
+
+    list.reverse().forEach((msg, index) => {
+      const div = document.createElement('div');
+      div.className = 'msg-card';
+      
+      // 日付の整形
+      let displayDate = msg.date;
+      if (displayDate instanceof Date) {
+        displayDate = `${displayDate.getMonth()+1}/${displayDate.getDate()} ${displayDate.getHours()}:${String(displayDate.getMinutes()).padStart(2,'0')}`;
+      }
+
+      // インデックス計算（reverseしているため）
+      const realIndex = list.length - 1 - index;
+
+      div.innerHTML = `
+        <div class="msg-header">
+          <span class="msg-title">${msg.title}</span>
+          <span class="msg-meta">
+            ${displayDate} by ${msg.author} 
+            <span class="delete-btn" onclick="deleteMsg(${realIndex})">[削除]</span>
+          </span>
+        </div>
+        <div class="msg-body">${msg.content}</div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function postMessage() {
+    const title = document.getElementById('in-title').value;
+    const body = document.getElementById('in-body').value;
+    const author = document.getElementById('in-author').value;
+
+    if(!title || !body) { alert("タイトルと内容は必須です"); return; }
+
+    // サーバーに送信
+    google.script.run.withSuccessHandler(function(){
+      // 送信成功したら入力欄を消して再読み込み
+      document.getElementById('in-title').value = '';
+      document.getElementById('in-body').value = '';
+      loadMessages();
+    }).addMessage(title, body, author);
+  }
+
+  function deleteMsg(index) {
+    if(confirm('削除しますか？')) {
+      google.script.run.withSuccessHandler(loadMessages).deleteMessage(index);
+    }
+  }
+</script>
+</body>
+</html>

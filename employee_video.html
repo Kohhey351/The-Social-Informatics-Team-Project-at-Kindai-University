@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<style>
+  body { background-color: #fff; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; }
+  .mac-window { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .title-bar { background-color: #000; color: white; padding: 0 15px; height: 35px; min-height: 35px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; }
+  .back-link { color: #ccc; text-decoration: none; margin-right: 15px; cursor: pointer; }
+  .back-link:hover { color: white; text-decoration: underline; }
+  .content { flex: 1; padding: 40px 50px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-family: "Hiragino Mincho ProN", serif; font-size: 32px; margin-bottom: 20px; align-self: flex-start; }
+  .video-container { background-color: #000; width: 80%; max-width: 800px; aspect-ratio: 16 / 9; display: flex; justify-content: center; align-items: center; color: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+  .live-badge { position: absolute; top: 20px; right: 20px; background: red; color: white; padding: 5px 10px; font-size: 12px; font-weight: bold; border-radius: 4px; animation: blink 2s infinite; }
+  @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="mac-window">
+  <div class="title-bar">
+    <div><a href="https://script.google.com/macros/s/AKfycbzUL12HZuEFQgALqt4m7YXcwS-2jYsChwHnek3sEjp7XxFsxKv5k7BWNJOsRjhuinh7/exec?page=employee" class="back-link">◀︎ 従業員ページに戻る</a><span>カメラ映像確認モード</span></div>
+    <span id="clock">--:--</span>
+  </div>
+  <div class="content">
+    <h1><span id="target-name"></span> 様の最新映像</h1>
+    <div class="video-container">
+      <div class="live-badge">● LIVE</div>
+      <div style="color: #aaa;">カメラ映像を受信中...<br>(デモ画面)</div>
+    </div>
+  </div>
+</div>
+<script>
+  window.onload = function() {
+    const name = localStorage.getItem('selectedEmployeeTarget');
+    document.getElementById('target-name').innerText = name ? name : "対象者不明";
+  };
+</script>
+</body>
+</html>
